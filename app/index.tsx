@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { Text, View, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 1. UPDATED TYPE: This now perfectly matches your Supabase table!
 interface Products {
   product_id: number | string;
   product_name: string;
@@ -17,18 +16,17 @@ export default function App() {
   const [cart, setCart] = useState<Products[]>([]);
 
   useEffect(() => {
-    fetch('http://192.168.55.118:3000/Products') 
+    fetch('http://192.168.55.109:3000/Products') 
       .then(response => response.json())
       .then(data => setProducts(data))
       .catch(error => console.error("Error loading products:", error));
   }, []);
 
-  const addToCart = (Products: Products) => {
-    setCart([...cart, Products]);
+  const addToCart = (product: Products) => {
+    setCart([...cart, product]);
   };
 
   const calculateTotal = () => {
-    // 2. Updated to calculate the total using product_price
     return cart.reduce((sum, item) => sum + item.product_price, 0);
   };
 
@@ -37,7 +35,7 @@ export default function App() {
       return Alert.alert("Wait!", "The cart is empty.");
     }
 
-    fetch('http://192.168.55.118:3000/checkout', {
+    fetch('http://192.168.55.109:3000/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items: cart, total: calculateTotal() })
@@ -51,44 +49,95 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView className="flex-1 bg-slate-50">
       
       {/* Product Grid Section */}
-      <View style={styles.gridSection}>
-        <Text style={styles.header}>Products</Text>
+      <View className="flex-[3] px-4 pt-3">
+        <Text className="text-3xl font-extrabold text-slate-900 mb-4 tracking-wide">
+          Menu
+        </Text>
         <FlatList
           data={Products}
           numColumns={2}
           keyExtractor={(item) => item.product_id.toString()}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
           renderItem={({ item }) => (
-            <TouchableOpacity style={styles.productCard} onPress={() => addToCart(item)}>
-              {/* 3. Updated to display product_name and product_price */}
-              <Text style={styles.productName}>{item.product_name}</Text>
-              <Text style={styles.productPrice}>₱{item.product_price}</Text>
+            <TouchableOpacity 
+              className="flex-1 bg-white m-1.5 rounded-2xl shadow-sm"
+              activeOpacity={0.7}
+              onPress={() => addToCart(item)}
+            >
+              <View className="p-4 items-center justify-center min-h-[110px]">
+                <Text className="text-base font-bold text-slate-800 text-center mb-1" numberOfLines={2}>
+                  {item.product_name}
+                </Text>
+                {item.cup_size ? (
+                  <Text className="text-xs text-slate-400 mb-2 uppercase font-semibold">
+                    {item.cup_size}
+                  </Text>
+                ) : null}
+                <Text className="text-base font-extrabold text-red-500">
+                  ₱{item.product_price.toFixed(2)}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
         />
       </View>
 
       {/* Shopping Cart Section */}
-      <View style={styles.cartSection}>
-        <Text style={styles.header}>Cart ({cart.length} items)</Text>
-        <FlatList
-          data={cart}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <View style={styles.cartItem}>
-              {/* 4. Updated the cart items to match as well */}
-              <Text>{item.product_name}</Text>
-              <Text>${item.product_price}</Text>
-            </View>
-          )}
-        />
+      <View className="flex-[2] bg-white px-5 pt-5 rounded-t-[30px] shadow-lg">
+        <View className="flex-row items-center mb-4">
+          <Text className="text-xl font-bold text-slate-900">Current Order</Text>
+          <View className="bg-blue-100 px-3 py-1 rounded-full ml-3">
+            <Text className="text-blue-600 font-bold text-sm">{cart.length}</Text>
+          </View>
+        </View>
+
+        {cart.length === 0 ? (
+          <View className="flex-1 justify-center items-center">
+            <Text className="text-slate-400 text-base italic">Tap a product to add it to your order.</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={cart}
+            keyExtractor={(item, index) => index.toString()}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <View className="flex-row justify-between items-center py-3.5 border-b border-slate-100">
+                <Text className="text-base text-slate-600 font-medium flex-1 pr-2" numberOfLines={1}>
+                  {item.product_name}
+                </Text>
+                <Text className="text-base text-slate-900 font-bold">
+                  ₱{item.product_price.toFixed(2)}
+                </Text>
+              </View>
+            )}
+          />
+        )}
         
-        <View style={styles.checkoutBar}>
-          <Text style={styles.totalText}>Total: ${calculateTotal()}</Text>
-          <TouchableOpacity style={styles.payButton} onPress={handleCheckout}>
-            <Text style={styles.payButtonText}>PAY</Text>
+        {/* Checkout Bar */}
+        <View className="flex-row justify-between items-center mt-3 py-5 border-t border-slate-100">
+          <View className="flex-col">
+            <Text className="text-sm text-slate-500 font-semibold mb-0.5">Total</Text>
+            <Text className="text-2xl font-black text-slate-900">
+              ₱{calculateTotal().toFixed(2)}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            className={`py-3.5 px-8 rounded-2xl items-center shadow-sm ${
+              cart.length === 0 ? 'bg-slate-200' : 'bg-emerald-400'
+            }`}
+            onPress={handleCheckout}
+            activeOpacity={0.8}
+            disabled={cart.length === 0}
+          >
+            <Text className={`text-lg font-extrabold tracking-wide ${
+              cart.length === 0 ? 'text-slate-400' : 'text-white'
+            }`}>
+              Charge
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -96,21 +145,3 @@ export default function App() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ff0000' },
-  header: { fontSize: 20, fontWeight: 'bold', marginVertical: 10, paddingHorizontal: 10 },
-  gridSection: { flex: 3, padding: 10 },
-  productCard: { 
-    flex: 1, backgroundColor: 'white', margin: 5, padding: 20, 
-    borderRadius: 10, alignItems: 'center', elevation: 3 
-  },
-  productName: { fontSize: 18, fontWeight: '600' },
-  productPrice: { fontSize: 16, color: 'gray', marginTop: 5 },
-  cartSection: { flex: 2, backgroundColor: 'white', padding: 15, borderTopLeftRadius: 20, borderTopRightRadius: 20, elevation: 10 },
-  cartItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  checkoutBar: { marginTop: 15, borderTopWidth: 2, borderTopColor: '#000', paddingTop: 10 },
-  totalText: { fontSize: 22, fontWeight: 'bold', marginBottom: 10 },
-  payButton: { backgroundColor: '#4CAF50', padding: 15, borderRadius: 10, alignItems: 'center' },
-  payButtonText: { color: 'white', fontSize: 18, fontWeight: 'bold' }
-});
